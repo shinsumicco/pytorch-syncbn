@@ -113,7 +113,7 @@ def test1():
         l2.backward()
         o2.step()
 
-    print("=> show the learned BN parameters, which are may be different between m1 and m2")
+    print("=> show the learned BN parameters, which are probably different between m1 and m2")
     m2 = m2.module
     print_parameters(m1, m2)
 
@@ -171,7 +171,7 @@ def test2():
         l2.backward()
         o2.step()
 
-    print("=> show the learned BN parameters, which are should be the same between m1 and m2")
+    print("=> show the learned BN parameters, which should be the same between m1 and m2")
     model_with_mm = model_with_mm.module
     print_parameters(model_with_nn, model_with_mm)
 
@@ -230,7 +230,7 @@ def test3():
         l2.backward()
         o2.step()
 
-    print("=> show the learned BN parameters, which are mey be different between m1 and m2")
+    print("=> show the learned BN parameters, which are probably different between m1 and m2")
     model_with_nn = model_with_nn.module
     model_with_mm = model_with_mm.module
     print_parameters(model_with_nn, model_with_mm)
