@@ -15,7 +15,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 sys.path.append("./")
-from modules import nn as NN
+from torchsyncbn import nn as NN
 
 torch.backends.cudnn.deterministic = True
 

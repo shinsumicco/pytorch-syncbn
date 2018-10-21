@@ -44,7 +44,7 @@ except ImportError:
 
 import torch
 import torch.nn as nn
-from modules.functional import batchnorm2d_sync
+from torchsyncbn.functional import batchnorm2d_sync
 
 
 class BatchNorm2d(nn.BatchNorm2d):
