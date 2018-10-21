@@ -24,15 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-"""
-/*****************************************************************************/
-
-BatchNorm2dSync with multi-gpu
-
-code referenced from : https://github.com/mapillary/inplace_abn
-
-/*****************************************************************************/
-"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
