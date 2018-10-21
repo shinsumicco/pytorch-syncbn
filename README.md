@@ -1,120 +1,59 @@
 # pytorch-syncbn
 
-Tamaki Kojima(tamakoji@gmail.com)
+Synchronized Multi-GPU Batch Normalization for PyTorch
+
+Most of the source codes are based on [pytorch-syncbn](https://github.com/tamakoji/pytorch-syncbn) written by Tamaki Kojima ([@tamakoji](https://github.com/tamakoji)).
 
 ## Overview
-This is alternative implementation of "Synchronized Multi-GPU Batch Normalization" which computes global stats across gpus instead of locally computed. SyncBN are getting important for those input image is large, and must use multi-gpu to increase the minibatch-size for the training.
+This is an alternative implementation of "Synchronized Multi-GPU Batch Normalization" which computes global stats across GPUs instead of locally computed.
 
-The code was inspired by [Pytorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding) and [Inplace-ABN](https://github.com/mapillary/inplace_abn)
+SyncBN are getting important for those input image is large, and must use multi-GPU to increase the mini-batch size for the training.
 
 ## Remarks
-- Unlike [Pytorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding), you don't need custom `nn.DataParallel`
-- Unlike [Inplace-ABN](https://github.com/mapillary/inplace_abn), you can just replace your `nn.BatchNorm2d` to this module implementation, since it will not mark for inplace operation
-- You can plug into arbitrary module written in PyTorch to enable Synchronized BatchNorm
-- Backward computation is rewritten and tested against behavior of `nn.BatchNorm2d`
+- Unlike [Pytorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding), you don't need custom `nn.DataParallel`.
+- Unlike [Inplace-ABN](https://github.com/mapillary/inplace_abn), you can just replace your `nn.BatchNorm2d` to this module implementation, since it will not mark for inplace operation.
+- You can plug into arbitrary module written in PyTorch to enable Synchronized BatchNorm.
+- Backward computation is rewritten and tested against behavior of `nn.BatchNorm2d`.
 
 ## Requirements
-For PyTorch, please refer to https://pytorch.org/
+For PyTorch, please refer to https://pytorch.org/.
 
-NOTE : The code is tested only with PyTorch v0.4.0, CUDA9.1.85/CuDNN7.1.4 on ubuntu16.04
+NOTE: The code is tested only with PyTorch v0.4.1, CUDA v8.0.44 and cuDNN v6.0.21 on Ubuntu 16.04.
 
-(It can also be compiled and run on the JetsonTX2, but won't work as multi-gpu synchronnized BN.)
-
-To install all dependencies using pip, run:
+To install all dependencies using pip, please run the following command:
 
 ```
-pip install -U -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Build
 
-use `make_ext.sh` to build the extension. for example:
+Please use [`setup.py`](./setup.py) to build the extension as follows:
+
 ```
-PYTHON_CMD=python3 ./make_ext.sh
+$ python setup.py [--cuda-path CUDA_PATH]
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2016 NVIDIA Corporation
+Built on Sun_Sep__4_22:14:01_CDT_2016
+Cuda compilation tools, release 8.0, V8.0.44
+=> building CUDA kernel
+=> creating PyTorch extension
+cc1: warning: command line option ‘-std=c++11’ is valid for C++/ObjC++ but not for C
+cc1plus: warning: command line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++
+cc1plus: warning: command line option ‘-std=c99’ is valid for C/ObjC but not for C++
+=> Please set PYTHONPATH as follows:
+
+export PYTHONPATH="/path/to/dir/of/pytorch-syncbn:$PYTHONPATH"
+
+$
 ```
+
+Then, please set `PYTHONPATH` as indicated.
 
 ## Usage
 
-Please refer to [`test.py`](./test.py) for testing the difference between `nn.BatchNorm2d` and `modules.nn.BatchNorm2d`
-
-```
-import torch
-from modules import nn as NN
-num_gpu = torch.cuda.device_count()
-model = nn.Sequential(
-    nn.Conv2d(3, 3, 1, 1, bias=False),
-    NN.BatchNorm2d(3),
-    nn.ReLU(inplace=True),
-    nn.Conv2d(3, 3, 1, 1, bias=False),
-    NN.BatchNorm2d(3),
-).cuda()
-model = nn.DataParallel(model, device_ids=range(num_gpu))
-x = torch.rand(num_gpu, 3, 2, 2).cuda()
-z = model(x)
-```
+Please refer to [`test.py`](./test.py) for testing the difference between non-synchronized and synchronized multi-GPU learning.
 
 ## Math
 
-### Forward
-1. compute <img src="https://latex.codecogs.com/gif.latex?\sum{x_i},\sum{x_i^2}"/> in each gpu
-2. gather all <img src="https://latex.codecogs.com/gif.latex?\sum{x_i},\sum{x_i^2}"/> from workers to master and compute <img src="https://latex.codecogs.com/gif.latex?\mu,\sigma"/> where
-
-    <img src="https://latex.codecogs.com/gif.latex?\mu=\frac{\sum{x_i}}{N}"/>
-
-    and
-
-    <img src="https://latex.codecogs.com/gif.latex?\sigma^2=\frac{\sum{x_i^2}-\mu\sum{x_i}}{N}"/></a>
-
-    and then above global stats to be shared to all gpus, update running_mean and running_var by moving average using global stats.
-
-3. forward batchnorm using global stats by
-
-    <img src="https://latex.codecogs.com/gif.latex?\hat{x_i}=\frac{x_i-\mu}{\sqrt{\sigma^2&plus;\epsilon}}"/>
-
-    and then
-
-    <img src="https://latex.codecogs.com/gif.latex?y_i=\gamma\cdot\hat{x_i}&plus;\beta"/>
-
-    where <img src="https://latex.codecogs.com/gif.latex?\gamma"/> is weight parameter and <img src="https://latex.codecogs.com/gif.latex?\beta"/> is bias parameter.
-
-4. save <img src="https://latex.codecogs.com/gif.latex?x,&space;\gamma\&space;\beta,&space;\mu,&space;\sigma^2"/> for backward
-
-### Backward
-
-1. Restore saved <img src="https://latex.codecogs.com/gif.latex?x,&space;\gamma\&space;\beta,&space;\mu,&space;\sigma^2"/>
-
-2. Compute below sums on each gpu
-
-    <img src="https://latex.codecogs.com/gif.latex?\sum_{i=1}^{N_j}(\frac{dJ}{dy_i})"/>
-
-    and
-
-    <img src="https://latex.codecogs.com/gif.latex?\sum_{i=1}^{N_j}(\frac{dJ}{dy_i}\cdot\hat{x_i})"/>
-
-    where <img src="https://latex.codecogs.com/gif.latex?j\in[0,1,....,num\_gpu]"/>
-
-    then gather them at master node to sum up global, and normalize with N where N is total number of elements for each channels. Global sums are then shared among all gpus.
-
-3. compute gradients using global stats
-
-    <img src="https://latex.codecogs.com/gif.latex?\frac{dJ}{dx_i},&space;\frac{dJ}{d\gamma},&space;\frac{dJ}{d\beta}&space;"/>
-
-    where
-
-    <img src="https://latex.codecogs.com/gif.latex?\frac{dJ}{d\gamma}=\sum_{i=1}^{N}(\frac{dJ}{dy_i}\cdot\hat{x_i})"/>
-
-    and
-
-    <img src="https://latex.codecogs.com/gif.latex?\frac{dJ}{d\beta}=\sum_{i=1}^{N}(\frac{dJ}{dy_i})"/>
-
-    and finally,
-
-    <img src="https://latex.codecogs.com/gif.latex?\frac{dJ}{dx_i}=\frac{dJ}{d\hat{x_i}}\frac{d\hat{x_i}}{dx_i}+\frac{dJ}{d\mu_i}\frac{d\mu_i}{dx_i}+\frac{dJ}{d\sigma^2_i}\frac{d\sigma^2_i}{dx_i}"/>  
-
-    <img src="https://latex.codecogs.com/gif.latex?=\frac{1}{N\sqrt{(\sigma^2+\epsilon)}}(N\frac{dJ}{d\hat{x_i}}-\sum_{j=1}^{N}(\frac{dJ}{d\hat{x_j}})-\hat{x_i}\sum_{j=1}^{N}(\frac{dJ}{d\hat{x_j}}\hat{x_j}))"/>  
-
-    <img src="https://latex.codecogs.com/gif.latex?=\frac{\gamma}{N\sqrt{(\sigma^2+\epsilon)}}(N\frac{dJ}{dy_i}-\sum_{j=1}^{N}(\frac{dJ}{dy_j})-\hat{x_i}\sum_{j=1}^{N}(\frac{dJ}{dy_j}\hat{x_j}))"/>  
-
-   Note that in the implementation, normalization with N is performed at step (2) and above equation and implementation is not exactly the same, but mathematically is same.
-
-   You can go deeper on above explanation at [Kevin Zakka's Blog](https://kevinzakka.github.io/2016/09/14/batch_normalization/)
+Please refer to [`README.md`](https://github.com/tamakoji/pytorch-syncbn/blob/master/README.md#math) of [original pytorch-syncbn](https://github.com/tamakoji/pytorch-syncbn).
