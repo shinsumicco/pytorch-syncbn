@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import os
 import argparse
 import subprocess
 from pathlib import Path
@@ -72,6 +73,8 @@ def build_modules():
     headers = [str(extension_dir / "syncbn.h")]
     extra_objects = [str(extension_dir / "syncbn.cu.o")]
 
+    os.environ["C_INCLUDE_PATH"] = str(cuda_include_dir)
+    os.environ["CPLUS_INCLUDE_PATH"] = str(cuda_include_dir)
     ffi = create_extension(
         "_ext.syncbn",
         headers=headers,
