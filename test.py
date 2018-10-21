@@ -98,7 +98,7 @@ def test1():
 
     print("=> learning the two models with the same inputs and targets")
     torch.manual_seed(123)
-    for _ in range(100):
+    for _ in range(5):
         x = torch.rand(num_gpu, 3, 2, 2).cuda()
 
         o1.zero_grad()
@@ -156,7 +156,7 @@ def test2():
 
     print("=> learning the two models with the same inputs and targets")
     torch.manual_seed(123)
-    for _ in range(100):
+    for _ in range(5):
         x = torch.rand(num_gpu, 3, 2, 2).cuda()
 
         o1.zero_grad()
@@ -215,7 +215,7 @@ def test3():
 
     print("=> learning the two models with the same inputs and targets")
     torch.manual_seed(123)
-    for _ in range(100):
+    for _ in range(5):
         x = torch.rand(num_gpu, 3, 2, 2).cuda()
 
         o1.zero_grad()
