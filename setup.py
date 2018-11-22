@@ -34,10 +34,8 @@ from torch.utils.ffi import create_extension
 
 def build_modules():
     parser = argparse.ArgumentParser(description="Install script for torchsyncbn package")
-    parser.add_argument("--cuda-path", default=Path("/usr/local/cuda"), type=Path, metavar="PATH",
-                        help="CUDA install path")
-    parser.add_argument("-v", "--verbose", action="store_true",
-                        help="verbose output")
+    parser.add_argument("--cuda-path", default=Path("/usr/local/cuda"), type=Path, metavar="PATH", help="CUDA install path")
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
     args = parser.parse_args()
 
     script_dir = Path(__file__).absolute().parent
